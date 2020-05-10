@@ -16,28 +16,29 @@ def killgphoto2Process():
             pid = int(line.split(None, 1) [0])
             os.kill(pid, signal.SIGKILL)
 
-shot_date = datetime.now().strftime("%Y-%m-%d")
-shot_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-picID = "Photometric"
 
-clearCommand = ["--folder","/store__00020001/DCIM/100CANON", \
-                "-R", "--delete-all-files"
+clearCommand = ["--folder","/store_00020001/DCIM/100CANON", \
+                "-R", "--delete-all-files"]
 
 triggerCommand = ["--trigger-capture"]
 
 downloadCommand = ["--get-all-files"]
 
-folder_name = shot_date + picID
-save_location = "/home/pi/Desktop/gphoto" + folder_name
 
-def captureImages():
-    gp(triggerCommand)
-    sleep(1)
-    gp(downloadCommand)
-    gp(clearCommand)
-
-def createSaveFolder():
+def captureImages(i):
+    try:
+        gp(triggerCommand)
+        sleep(0.2)
+        GPIO.output(GPIOpins[i], GPIO.LOW)
+        sleep(0.25)
+        gp(downloadCommand)
+        gp(clearCommand)
+    except:
+        for i in range(0,8):
+            GPIO.output(GPIOpins[i], GPIO.LOW)
+            
+def createSaveFolder(save_location):
     try:
         os.makedirs(save_location)
     except:
@@ -49,27 +50,35 @@ def renameFiles():
     for filename in os.listdir("."):
         if len(filename) < 13:
             if filename.endswith(".JPG"):
-                os.rename(filename,(shot_time +"-"+str(ID)+".JPG"))
+                os.rename(filename,(str(ID)+".JPG"))
                 print("Renamed the JPG")
             elif filename.endswith(".CR2"):
-                os.rename(filename,(shot_time +"-"+str(ID)+".CR2"))
+                os.rename(filename,(str(ID)+".CR2"))
         ID += 1
 
 #================================--Program Start--================================
 killgphoto2Process()
-gp(clearCommand)
-createSaveFolder()
+GPIOpins = [27,17,22,23,4,14,15,18]
+#createSaveFolder()
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
+def captureCycle():
+    gp(clearCommand)
+    GPIOpins = [27,17,22,23,4,14,15,18]
 
-GPIOpins = [17,27,22,18]
-for i in range(0,4):
-    GPIO.setup(GPIOpins[i], GPIO.OUT)
+    for i in range(0,8):
+        GPIO.output(GPIOpins[i], GPIO.HIGH)
+        captureImages(i)
+        
+    renameFiles()
+    
+def captureData():
+    
+    shot_time = datetime.now().strftime("%Y-%m-%d@%H:%M:%S")
+    picID = "piShots"
+    folder_name = shot_time + picID
+    save_location = "/home/pi/gphoto/PhotometricCameraControl/data/" + folder_name
+    createSaveFolder(save_location)
+    captureCycle()
 
-for i in range(0,4):
-    GPIO.output(GPIOpins[i], GPIO.HIGH)
-    captureImages()
-    GPIO.output(GPIOpins[i], GPIO.LOW)
-
-renameFiles()
+    return(save_location + '/')
+    
