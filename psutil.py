@@ -1,7 +1,7 @@
 import cv2
 import glob
 import numpy as np
-
+from PIL import Image
 
 def load_lighttxt(filename=None):
     """
@@ -117,10 +117,17 @@ def disp_normalmap(normal=None, height=None, width=None, delay=0, name=None):
     N = (N + 1.0) / 2.0  # Rescale
     if name is None:
         name = 'normal map'
+        
+    #Image.fromarray((N * 255).astype(np.uint8)).save('./MAP.png')
+
+    
     cv2.imshow(name, N)
     cv2.waitKey(delay)
     cv2.destroyWindow(name)
     cv2.waitKey(1)    # to deal with frozen window...
+    
+    img = cv2.convertScaleAbs(N, alpha=(255.0))
+    cv2.imwrite("./MAP.png", img)
 
 
 def save_normalmap_as_npy(filename=None, normal=None, height=None, width=None):
